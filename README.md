@@ -1,13 +1,47 @@
-# HealthTrack AI (Student MVP)
+# HealthTrack AI
 
-English-only student wellness MVP: Django REST API + Expo (React Native). Manual logs for sleep, stress, water, and mood; class blocks for quiet hydration windows; rule-based burnout hints; optional LLM for recommendations, chat, and mood summaries; dorm recipes, weekly meal plan, grocery estimate vs budget; daily quests and XP.
+### Student wellness companion · MVP
+
+---
+
+> Turn scattered habits into a single, calm dashboard: log how you feel, see trends at a glance, and get practical nudges—**without** replacing a clinician or crisis line.
+
+**HealthTrack AI** is an English-language portfolio / hackathon-style app for students who juggle sleep, stress, coursework, and a tight food budget. A **Django REST** API powers auth and data; an **Expo (React Native, SDK 54)** client puts everything behind a tabbed UI with a **Today** screen that surfaces big numbers and simple charts so progress is obvious, not buried in forms.
+
+| | |
+| :-- | :-- |
+| **Stack** | Django + DRF · JWT · SQLite or Postgres · Expo / TypeScript |
+| **Intelligence** | Rule-based burnout + schedule hints; optional OpenAI-compatible LLM for recommendations, chat, and mood summaries |
+| **Scope** | Sleep, stress, water, mood · class blocks · deadlines · recipes & weekly meal plan · grocery estimate vs budget · quests & XP |
+
+### What ships in the box
+
+- **Today** — KPI tiles, bar charts from your latest logs, shortcuts, daily quests  
+- **Body** — wellness logging and mood journal  
+- **Plan** — schedule, deadlines, meals, grocery list  
+- **Coach** — insights and conversational assistant  
+- **More** — profile, budget, hydration reminders (where the platform allows), focus audio  
+
+---
+
+## Repository layout
+
+| Path | Role |
+|------|------|
+| `backend/` | Django + DRF, JWT auth, SQLite or Postgres |
+| `mobile/` | Expo app (tabs: Today, Body, Plan, Coach, More) |
+
+Do **not** run `git init` inside `mobile/` if this folder belongs to this repo—Git would track it as a submodule-style gitlink instead of normal files.
 
 ## Backend
 
 ```bash
 cd backend
 python -m venv .venv
+# Windows:
 .\.venv\Scripts\activate
+# macOS/Linux:
+# source .venv/bin/activate
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py seed_data
@@ -15,56 +49,67 @@ python manage.py seed_demo_accounts
 python manage.py runserver 0.0.0.0:8000
 ```
 
+API base: `http://<host>:8000/api/` · **`GET /api/health/`** (no auth) for a quick check.
+
 ### Demo logins (after `seed_demo_accounts`)
 
-| Username | Password | What to check |
-|----------|----------|----------------|
-| `demo` | `demo12345` | Higher sleep averages, low burnout, class blocks, some quests completed |
-| `stressy` | `stressy12345` | Low sleep, stress 5, multiple soon deadlines → higher burnout on Insights |
-| `broke` | `broke12345` | Weekly budget $25 + full meal plan → grocery list over budget |
+| Username | Password | Notes |
+|----------|----------|--------|
+| `demo` | `demo12345` | Higher sleep, low burnout, quests |
+| `stressy` | `stressy12345` | Low sleep, stress 5, deadlines → burnout on Insights |
+| `broke` | `broke12345` | Tight budget + meal plan → grocery over budget |
 
-Re-run with `python manage.py seed_demo_accounts --purge` to reset those three accounts.
+Reset: `python manage.py seed_demo_accounts --purge`
 
-Optional environment variables (create `backend/.env` or set in shell):
+### Backend environment
+
+Copy `backend/.env.example` to `backend/.env` and adjust.
 
 | Variable | Purpose |
 |----------|---------|
 | `DJANGO_SECRET_KEY` | Production secret |
 | `DJANGO_DEBUG` | `false` in production |
-| `DJANGO_ALLOWED_HOSTS` | Optional; when `DEBUG=true` and unset, all hosts are allowed (needed for `http://192.168.x.x:8000` from a phone) |
-| `CORS_ALLOWED_ORIGINS` | When `DEBUG` is false |
-| `LLM_API_KEY` | OpenAI-compatible API key |
+| `DJANGO_ALLOWED_HOSTS` | Optional; with `DEBUG=true` and unset, permissive dev (LAN IP from a phone) |
+| `CORS_ALLOWED_ORIGINS` | Required when `DEBUG` is false |
+| `LLM_API_KEY` | OpenAI-compatible key (optional) |
 | `LLM_API_BASE` | Default `https://api.openai.com/v1` |
 | `LLM_MODEL` | Default `gpt-4o-mini` |
-| `POSTGRES_DB` | If set, switches from SQLite to PostgreSQL |
+| `POSTGRES_*` | If set (see `settings.py`), use Postgres instead of SQLite |
 
-API base path: `http://<host>:8000/api/`
+## Mobile (Expo)
 
-## Mobile (Expo Go)
-
-The project uses **Expo SDK 54** so it matches the **Expo Go** app from the iOS App Store / Google Play (store builds often lag behind the newest SDK).
+Uses **SDK 54** to match **Expo Go** from the store.
 
 ```bash
 cd mobile
+npm install
 npx expo start
 ```
 
-Set **`HARDCODED_API_BASE`** in `mobile/src/config.ts` to your PC’s LAN API URL (same Wi‑Fi as the phone), e.g. `http://192.168.0.166:8000/api`. For the **Android emulator**, use `http://10.0.2.2:8000/api`.
+### API URL
 
-Use Expo Go to scan the QR code.
+Set **`HARDCODED_API_BASE`** in `mobile/src/config.ts` to your machine’s API (same Wi‑Fi as the device), e.g. `http://192.168.0.166:8000/api`. **Android emulator:** `http://10.0.2.2:8000/api`.
 
-**Django:** use `runserver 0.0.0.0:8000`. With `DEBUG=true` and no `DJANGO_ALLOWED_HOSTS` in `.env`, all hosts are allowed.
+`mobile/.env.example` only documents this; the app reads the constant in `config.ts`.
 
-Optional: **`GET /api/health/`** (no auth) returns `{"ok":true}` for quick checks in a browser.
+### App structure
 
-In **Settings**, use **Schedule hydration reminders** after saving class blocks (where supported). The app requests notification permission and schedules up to two reminders per day for the next seven days, skipping times that fall inside your class blocks. OS scheduling limits may apply.
+- **Today** — greeting, XP, KPI tiles (sleep / water / stress / quests), bar charts (last logs), shortcuts, daily quests.
+- **Body** — wellness logs, mood journal.
+- **Plan** — hub to schedule, deadlines, meals, grocery.
+- **Coach** — insights, AI assistant chat.
+- **More** — settings (profile, hydration reminders where supported), focus audio.
 
-**Expo Go on Android (SDK 53+):** local notification APIs were removed from Expo Go; the app skips loading `expo-notifications` there so you should not see the related console warning, and the schedule button is disabled with an on-screen note. Use a **development build** or test reminders on **iOS Expo Go** / a release build.
+Run Django with `0.0.0.0:8000` so LAN devices can reach it.
 
-### Expo Go vs development build
+### Notifications
 
-Apple Health, Google Health Connect, and some native sensors are **not** fully available in Expo Go. A **development build** (`expo prebuild` / EAS Build) is required for deeper health integrations later.
+**Schedule hydration reminders** (Settings) uses class blocks from **Plan → Class schedule**. **Expo Go on Android:** local notifications are not available in Go; the UI disables scheduling and explains. Use a **dev build** or test on **iOS Expo Go** / a release build.
+
+### Beyond Expo Go
+
+Apple Health, Health Connect, and many native APIs need a **development build** (`expo prebuild` / EAS), not Expo Go alone.
 
 ## Not medical advice
 
-This app does not diagnose or treat conditions. For emergencies or crisis support, use local emergency services or campus resources.
+This app does not diagnose or treat conditions. For emergencies, use local emergency services or campus crisis resources.
